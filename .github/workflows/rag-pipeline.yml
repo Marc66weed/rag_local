@@ -22,31 +22,32 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 殺掉所有可能干擾的背景進程
       - name: Terminate Existing Processes
         shell: powershell
         run: |
           Stop-Process -Name "python", "streamlit", "git" -Force -ErrorAction SilentlyContinue
           Start-Sleep -s 2
 
-      # 2. 拔掉官方 checkout 套件，改用原生 Git 指令強行同步 (完全避開 rmdir 錯誤)
       - name: Native Git Sync
         shell: powershell
         run: |
-          # 確保有 Git 儲存庫環境
-          if (-not (Test-Path .git)) {
-            git init
-          }
-          # 移除舊連線並使用 GitHub 內建 Token 建立安全連線
+          if (-not (Test-Path .git)) { git init }
           git remote remove origin -ErrorAction SilentlyContinue
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Marc66weed/rag_local.git
-          
-          # 強制抓取最新代碼並覆蓋本地
           git fetch origin main
           git reset --hard origin/main
 
-      # 3. 啟動 Streamlit
-      - name: Launch Streamlit
+      # 修正點：在這裡加入自動建立 venv 與安裝套件的指令
+      - name: Setup Env and Launch Streamlit
         shell: powershell
         run: |
+          # 1. 如果沒有 venv 資料夾，就當場建立一個
+          if (-not (Test-Path ".\venv")) {
+              python -m venv venv
+          }
+          
+          # 2. 根據 requirements.txt 安裝你專案需要的套件
+          .\venv\Scripts\pip install -r requirements.txt -q
+          
+          # 3. 啟動 Streamlit
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
