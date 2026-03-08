@@ -22,19 +22,28 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 清理舊進程：確保沒有 Python 或 Streamlit 在佔用檔案
+      # 1. 殺掉所有可能干擾的背景進程
       - name: Terminate Existing Processes
         shell: powershell
         run: |
-          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
-          Get-Process streamlit -ErrorAction SilentlyContinue | Stop-Process -Force
+          Stop-Process -Name "python", "streamlit", "git" -Force -ErrorAction SilentlyContinue
+          Start-Sleep -s 2
 
-      # 2. 核心解法：關閉憑證駐留 (persist-credentials) 以避開 Windows 的 EBUSY 暫存目錄鎖死
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          clean: false
-          persist-credentials: false 
+      # 2. 拔掉官方 checkout 套件，改用原生 Git 指令強行同步 (完全避開 rmdir 錯誤)
+      - name: Native Git Sync
+        shell: powershell
+        run: |
+          # 確保有 Git 儲存庫環境
+          if (-not (Test-Path .git)) {
+            git init
+          }
+          # 移除舊連線並使用 GitHub 內建 Token 建立安全連線
+          git remote remove origin -ErrorAction SilentlyContinue
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Marc66weed/rag_local.git
+          
+          # 強制抓取最新代碼並覆蓋本地
+          git fetch origin main
+          git reset --hard origin/main
 
       # 3. 啟動 Streamlit
       - name: Launch Streamlit
