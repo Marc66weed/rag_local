@@ -22,23 +22,22 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 第一步先殺掉所有鎖定檔案的程序，出錯也繼續跑
-      - name: Kill Locked Processes
+      # 1. 使用標準 PowerShell 語法關閉進程，避免 || 錯誤
+      - name: Terminate Existing Processes
         shell: powershell
-        continue-on-error: true
         run: |
-          taskkill /F /IM python.exe /T
-          taskkill /F /IM streamlit.exe /T
-          Start-Sleep -s 3
+          $processes = Get-Process python -ErrorAction SilentlyContinue
+          if ($processes) { $processes | Stop-Process -Force -ErrorAction SilentlyContinue }
+          Start-Sleep -s 2
 
-      # 2. 關鍵：設定 clean 為 false。這會防止它去動那個報錯的 _temp 資料夾
+      # 2. 核心修正：停用 clean。避免 Windows 在 checkout 時嘗試刪除被鎖定的目錄
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           clean: false
 
-      # 3. 啟動 Streamlit (確保路徑正確)
-      - name: Launch Streamlit
-        shell: powershell
+      # 3. 核心修正：使用 cmd 徹底脫離進程樹，避免鎖住 _temp 資料夾
+      - name: Launch Streamlit (Detached)
+        shell: cmd
         run: |
-          Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
+          start /B venv\Scripts\streamlit.exe run interface.py
