@@ -1,5 +1,8 @@
+# RAG for 文字
 ![RAG運行文字對答狀況](images/sc1.png)
+# RAG for 圖片
 ![RAG運行圖片對答狀況](images/sc2.png)
+# RAG for 多重問題
 ![RAG運行多重問題對答狀況](images/sc3.png)
 # Local Paper RAG Assistant
 
