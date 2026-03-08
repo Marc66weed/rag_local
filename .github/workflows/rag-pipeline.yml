@@ -5,7 +5,6 @@ on:
     branches: [ main ]
 
 jobs:
-  # --- 第一階段：雲端測試 ---
   build-test:
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +18,6 @@ jobs:
           python -m pip install --upgrade pip -q
           if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi
 
-  # --- 第二階段：本地部署 ---
   deploy-to-windows:
     needs: build-test
     runs-on: self-hosted
@@ -33,6 +31,9 @@ jobs:
       - name: Native Git Sync
         shell: powershell
         run: |
+          # 關鍵加入：強迫 Git 信任所有目錄，無視擁有者不同的警告
+          git config --global --add safe.directory '*'
+          
           if (-not (Test-Path .git)) { git init }
           cmd /c "git remote remove origin 2>nul"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Marc66weed/rag_local.git
@@ -42,15 +43,12 @@ jobs:
       - name: Setup Env and Launch Streamlit
         shell: powershell
         run: |
-          # 1. 核心修正：使用絕對路徑，強迫系統精準呼叫 Python 建立虛擬環境
           if (-not (Test-Path ".\venv")) {
-              & "C:\Users\mark2\AppData\Local\Programs\Python\Python312\python.exe" -m venv venv
+              python -m venv venv
           }
           
-          # 2. 安裝套件
           if (Test-Path "requirements.txt") {
               .\venv\Scripts\pip install -r requirements.txt -q
           }
           
-          # 3. 啟動 Streamlit
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
