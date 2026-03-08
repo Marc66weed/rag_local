@@ -5,37 +5,40 @@ on:
     branches: [ main ]
 
 jobs:
-  # --- 第一階段：CI (在 GitHub 雲端測試環境執行) ---
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip -q
           if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi
 
-  # --- 第二階段：CD (在你的 Windows 筆電 MARCSPC 執行) ---
   deploy-to-windows:
     needs: build-test
-    runs-on: self-hosted  # 指向你目前 Idle 狀態的 Runner
+    runs-on: self-hosted
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4 # 修正：解決 "not a git repository" 錯誤
-
-      - name: Memory & Service Refresh
+      # 1. 關鍵修正：先解鎖檔案，再進行同步
+      - name: Unlock Files (Kill Python)
         shell: powershell
         run: |
-          # 1. 關閉舊的 Python 進程 (釋放 4.0GiB 記憶體)
-          Stop-Process -Name "python" -ErrorAction SilentlyContinue
-          
-          # 2. 啟動 Streamlit 介面 (使用你的虛擬環境路徑)
-          # 使用 Start-Process 確保它在背景執行，不會卡住 Pipeline 進度
+          Stop-Process -Name "python" -Force -ErrorAction SilentlyContinue
+          # 給系統 2 秒鐘反應時間釋放控制權
+          Start-Sleep -s 2
+
+      # 2. 同步程式碼 (加上 clean: false 避免 EBUSY 錯誤)
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false 
+
+      # 3. 啟動服務
+      - name: Launch Streamlit
+        shell: powershell
+        run: |
+          # 確保路徑正確並在背景啟動
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
