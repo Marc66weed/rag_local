@@ -22,23 +22,23 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 關鍵修正：先解鎖檔案，再進行同步
-      - name: Unlock Files (Kill Python)
+      # 1. 在同步程式碼之前，先確保沒有任何 Python 程序在佔用檔案
+      - name: Force Unlock Files
         shell: powershell
         run: |
-          Stop-Process -Name "python" -Force -ErrorAction SilentlyContinue
-          # 給系統 2 秒鐘反應時間釋放控制權
+          # 使用 taskkill 比 Stop-Process 更徹底
+          taskkill /F /IM python.exe /T /FI "STATUS eq RUNNING" || exit 0
           Start-Sleep -s 2
 
-      # 2. 同步程式碼 (加上 clean: false 避免 EBUSY 錯誤)
+      # 2. 關鍵修正：停用自動清理功能，避免觸發 Windows 的 EBUSY 鎖定
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           clean: false 
 
-      # 3. 啟動服務
+      # 3. 啟動 RAG 介面
       - name: Launch Streamlit
         shell: powershell
         run: |
-          # 確保路徑正確並在背景啟動
+          # 確保使用虛擬環境並在背景開啟介面
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
