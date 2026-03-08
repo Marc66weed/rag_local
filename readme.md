@@ -1,3 +1,6 @@
+![RAG運行文字對答狀況](images/sc1.png)
+![RAG運行圖片對答狀況](images/sc2.png)
+![RAG運行多重問題對答狀況](images/sc3.png)
 # Local Paper RAG Assistant
 
 專為自身論文範例客製化的本地端 RAG 問答系統。
@@ -20,3 +23,13 @@
 1. **安裝 Python 套件**：
    ```bash
    pip install -r requirements.txt
+
+2. new terminal pull 千問
+   ollama pull qwen2
+
+3. interface.py第50行
+   論文路徑更換: "C:\rag_local\paper\sensors-24-01869.pdf"   
+4. 啟動本地rag
+streamlit run interface.py
+
+5. echo "Include/`nLib/`nScripts/`npyvenv.cfg`n__pycache__/`n*.pyc`nextracted_images/" > .gitignore

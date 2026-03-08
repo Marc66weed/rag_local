@@ -47,7 +47,7 @@ st.markdown("""
 if "assistant" not in st.session_state:
     with st.status("正在本篇學術大腦...", expanded=True) as status:
         # 指向你的感測器論文
-        target_path = r"D:\rag_env\rag_env\paper\sensors-24-01869.pdf"
+        target_path = r"C:\rag_local\paper\sensors-24-01869.pdf"
         st.session_state.assistant = PaperAssistant(target_path)
         status.update(label="系統已就緒", state="complete")
 
