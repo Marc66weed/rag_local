@@ -37,7 +37,13 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-      # 修正點：在這裡加入自動建立 venv 與安裝套件的指令
+      # 核心修正：讓 GitHub Runner 自動幫你把 Python 的 PATH 設定好
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # 自動建立環境與啟動
       - name: Setup Env and Launch Streamlit
         shell: powershell
         run: |
@@ -46,8 +52,10 @@ jobs:
               python -m venv venv
           }
           
-          # 2. 根據 requirements.txt 安裝你專案需要的套件
-          .\venv\Scripts\pip install -r requirements.txt -q
+          # 2. 防呆：確認 requirements.txt 存在才安裝套件
+          if (Test-Path "requirements.txt") {
+              .\venv\Scripts\pip install -r requirements.txt -q
+          }
           
           # 3. 啟動 Streamlit
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
