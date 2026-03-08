@@ -5,19 +5,21 @@ on:
     branches: [ main ]
 
 jobs:
+  # --- 第一階段：雲端測試 ---
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip -q
           if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi
 
+  # --- 第二階段：本地部署 ---
   deploy-to-windows:
     needs: build-test
     runs-on: self-hosted
@@ -32,7 +34,6 @@ jobs:
         shell: powershell
         run: |
           if (-not (Test-Path .git)) { git init }
-          # 使用 cmd 原生過濾錯誤，避免將 PowerShell 參數誤傳給 Git
           cmd /c "git remote remove origin 2>nul"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Marc66weed/rag_local.git
           git fetch origin main
@@ -41,13 +42,15 @@ jobs:
       - name: Setup Env and Launch Streamlit
         shell: powershell
         run: |
-          # 使用 Windows 全局內建的 py 啟動器，避開 python 指令不在 PATH 的問題
+          # 1. 核心修正：使用絕對路徑，強迫系統精準呼叫 Python 建立虛擬環境
           if (-not (Test-Path ".\venv")) {
-              py -m venv venv
+              & "C:\Users\mark2\AppData\Local\Programs\Python\Python312\python.exe" -m venv venv
           }
           
+          # 2. 安裝套件
           if (Test-Path "requirements.txt") {
               .\venv\Scripts\pip install -r requirements.txt -q
           }
           
+          # 3. 啟動 Streamlit
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
