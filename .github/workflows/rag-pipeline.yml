@@ -22,22 +22,22 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 使用標準 PowerShell 語法關閉進程，避免 || 錯誤
+      # 1. 清理舊進程：確保沒有 Python 或 Streamlit 在佔用檔案
       - name: Terminate Existing Processes
         shell: powershell
         run: |
-          $processes = Get-Process python -ErrorAction SilentlyContinue
-          if ($processes) { $processes | Stop-Process -Force -ErrorAction SilentlyContinue }
-          Start-Sleep -s 2
+          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process streamlit -ErrorAction SilentlyContinue | Stop-Process -Force
 
-      # 2. 核心修正：停用 clean。避免 Windows 在 checkout 時嘗試刪除被鎖定的目錄
+      # 2. 核心解法：關閉憑證駐留 (persist-credentials) 以避開 Windows 的 EBUSY 暫存目錄鎖死
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           clean: false
+          persist-credentials: false 
 
-      # 3. 核心修正：使用 cmd 徹底脫離進程樹，避免鎖住 _temp 資料夾
-      - name: Launch Streamlit (Detached)
-        shell: cmd
+      # 3. 啟動 Streamlit
+      - name: Launch Streamlit
+        shell: powershell
         run: |
-          start /B venv\Scripts\streamlit.exe run interface.py
+          Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
