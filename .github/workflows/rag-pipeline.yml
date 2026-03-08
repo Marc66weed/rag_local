@@ -22,22 +22,22 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 徹底關閉 Python 避免檔案被鎖住，使用 continue-on-error 確保沒程式時也能繼續
-      - name: Terminate Existing Processes
+      # 1. 第一步先殺掉所有鎖定檔案的程序，出錯也繼續跑
+      - name: Kill Locked Processes
         shell: powershell
         continue-on-error: true
         run: |
-          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
-          Get-Process streamlit -ErrorAction SilentlyContinue | Stop-Process -Force
-          Start-Sleep -s 2
+          taskkill /F /IM python.exe /T
+          taskkill /F /IM streamlit.exe /T
+          Start-Sleep -s 3
 
-      # 2. 同步程式碼，關閉 clean 功能避免 Windows 刪除暫存夾時報錯 (EBUSY)
+      # 2. 關鍵：設定 clean 為 false。這會防止它去動那個報錯的 _temp 資料夾
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           clean: false
 
-      # 3. 啟動 Streamlit
+      # 3. 啟動 Streamlit (確保路徑正確)
       - name: Launch Streamlit
         shell: powershell
         run: |
