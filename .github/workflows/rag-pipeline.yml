@@ -32,30 +32,22 @@ jobs:
         shell: powershell
         run: |
           if (-not (Test-Path .git)) { git init }
-          git remote remove origin -ErrorAction SilentlyContinue
+          # 使用 cmd 原生過濾錯誤，避免將 PowerShell 參數誤傳給 Git
+          cmd /c "git remote remove origin 2>nul"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Marc66weed/rag_local.git
           git fetch origin main
           git reset --hard origin/main
 
-      # 核心修正：讓 GitHub Runner 自動幫你把 Python 的 PATH 設定好
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      # 自動建立環境與啟動
       - name: Setup Env and Launch Streamlit
         shell: powershell
         run: |
-          # 1. 如果沒有 venv 資料夾，就當場建立一個
+          # 使用 Windows 全局內建的 py 啟動器，避開 python 指令不在 PATH 的問題
           if (-not (Test-Path ".\venv")) {
-              python -m venv venv
+              py -m venv venv
           }
           
-          # 2. 防呆：確認 requirements.txt 存在才安裝套件
           if (Test-Path "requirements.txt") {
               .\venv\Scripts\pip install -r requirements.txt -q
           }
           
-          # 3. 啟動 Streamlit
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
