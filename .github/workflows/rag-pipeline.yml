@@ -22,23 +22,23 @@ jobs:
     needs: build-test
     runs-on: self-hosted
     steps:
-      # 1. 在同步程式碼之前，先確保沒有任何 Python 程序在佔用檔案
-      - name: Force Unlock Files
+      # 1. 徹底關閉 Python 避免檔案被鎖住，使用 continue-on-error 確保沒程式時也能繼續
+      - name: Terminate Existing Processes
         shell: powershell
+        continue-on-error: true
         run: |
-          # 使用 taskkill 比 Stop-Process 更徹底
-          taskkill /F /IM python.exe /T /FI "STATUS eq RUNNING" || exit 0
+          Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process streamlit -ErrorAction SilentlyContinue | Stop-Process -Force
           Start-Sleep -s 2
 
-      # 2. 關鍵修正：停用自動清理功能，避免觸發 Windows 的 EBUSY 鎖定
+      # 2. 同步程式碼，關閉 clean 功能避免 Windows 刪除暫存夾時報錯 (EBUSY)
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          clean: false 
+          clean: false
 
-      # 3. 啟動 RAG 介面
+      # 3. 啟動 Streamlit
       - name: Launch Streamlit
         shell: powershell
         run: |
-          # 確保使用虛擬環境並在背景開啟介面
           Start-Process -FilePath ".\venv\Scripts\streamlit.exe" -ArgumentList "run interface.py"
